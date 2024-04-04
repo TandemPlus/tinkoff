@@ -1,6 +1,7 @@
 module Tinkoff
   class Request
-    BASE_URL = 'https://securepay.tinkoff.ru/rest/'.freeze
+    BASE_URL = 'https://securepay.tinkoff.ru/v2/'.freeze
+    HEADER = { 'Content-Type' => 'application/json' }.freeze
 
     def initialize(path, params = {})
       @url = BASE_URL + path
@@ -9,7 +10,8 @@ module Tinkoff
 
     def perform
       prepare_params
-      response = HTTParty.post(@url, body: @params, format: :json).parsed_response
+      response = HTTParty.post(@url, body: @params, headers: HEADER).parsed_response
+      p response
       Tinkoff::Payment.new(response)
     end
 
