@@ -10,16 +10,13 @@ module Tinkoff
 
     def perform
       prepare_params
-      response = HTTParty.post(@url, body: @params, headers: HEADER).parsed_response
-      p response
+      response = HTTParty.post(@url, body: @params.to_json, headers: HEADER).parsed_response
       Tinkoff::Payment.new(response)
     end
 
     private
 
     def prepare_params
-      # Encode and join DATA hash
-      prepare_data
       # Add terminal key and password
       @params.merge!(default_params)
       # Sort params by key
@@ -28,24 +25,18 @@ module Tinkoff
       @params[:Token] = token
     end
 
-    # Params signature
+    # В массив нужно добавить только параметры корневого объекта.
+    # Вложенные объекты и массивы не участвуют в расчете токена.
     def token
-      values = @params.values.join
+      token_params = @params.except(:DATA, :Receipt).merge({ Password: Tinkoff.config.password })
+      values = token_params.sort.to_h.values.join
       Digest::SHA256.hexdigest(values)
     end
 
     def default_params
       {
-        TerminalKey: Tinkoff.config.terminal_key,
-        Password: Tinkoff.config.password
+        TerminalKey: Tinkoff.config.terminal_key
       }
-    end
-
-    # Ключ=значение дополнительных параметров через “|”, например Email=a@test.ru|Phone=+71234567890
-    def prepare_data
-      return unless @params[:DATA].to_s.empty?
-
-      @params[:DATA] = @params[:DATA].to_query.tr('&', '|')
     end
   end
 end
